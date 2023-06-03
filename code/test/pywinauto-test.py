@@ -1,53 +1,23 @@
 from pywinauto import Desktop, Application
+import time
 
-# 获取当前桌面
-desktop = Desktop(backend="uia")
-"""
-# 获取用户输入的窗口名
-window_name = input("请输入窗口名：")
+app = Application()
+try:
+    app.start(r'C:\Users\songy\AppData\Local\Programs\yuque-desktop\语雀.exe')
+except Exception as e:
+    print(e)
+    exit(0)
 
-# 遍历所有窗口，找到匹配的窗口，并将其置于最前面
-for window in desktop.windows():
-    if  window_name in window.window_text() :
-        window.set_focus()
-        break
-else:
-    # 如果没有找到匹配的窗口，则打开应用程序
-    app = Application().start(path_dict[window_name])
-"""
+time.sleep(1)
+# 获取当前桌面上的所有顶层窗口
+windows = Desktop(backend="uia").windows()
 
-def get_last_accessed_window():
-    from pywinauto import Desktop
-    import os
-    desktop = Desktop(backend="uia")
-    # app = Application()
-    windows = desktop.windows()
-    for window in windows:
-        props = desktop_window.GetProperties()
-        windows_props = props['Children']
-    latest_access_time = 0
-    latest_window = None
-
-    for window_prop in windows_props:
-        access_time = window_prop['time_last_accessed']
-        
-        if access_time > latest_access_time:
-            latest_access_time = access_time
-            latest_window = window_prop
-            
-    print(latest_window)
-
-def print_windows():
-    # 获取当前桌面
-    desktop = Desktop(backend="uia")
-
-    # 获取最前面的窗口
-    window = desktop.windows()[0]
-
-    # 所有窗口？
-    for window in desktop.windows():
-        print(window)
-    
-    get_last_accessed_window()
-    
-print_windows()
+# 遍历每个窗口并检查其状态
+for window in windows:
+    # 检查窗口是否可见且已启用
+    if window.is_visible() and window.is_enabled():
+        # 检查窗口的状态是否为“焦点”
+        if window.has_keyboard_focus():
+            print(f"{window.window_text()} 是焦点窗口")
+        else:
+            print(f"{window.window_text()} 不是焦点窗口")

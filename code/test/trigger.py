@@ -15,18 +15,10 @@ def read_data():
             path_dict[window_name] = path
     return ls_window_name, path_dict
 
-op = 0
 def Trigger(code):
     global op
-    if code[0]=='1' and op == 0:
+    if code[0]=='1':
         focus(0)
-        op = 1
-    # root.after(100)  # 每100毫秒调用一次
-    
-    elif code[0]=='1' and op == 1:
-        # print_windows()
-        focus(0, r=True)
-        op = 0
 
 import time
 st = time.time()
@@ -47,10 +39,23 @@ def focus(idx, r=False):
     st_ = time.time()
     if ls_window[idx] != None:
         if r: # reverse
-            ls_window[idx].minimize()
-            print('minimize')
+            print('reverse')
+            # ls_window[idx].minimize()
         else:
-            ls_window[idx].set_focus()
+            window = ls_window[idx]
+            print(f'time: {st_}')
+            # print(window.is_active())
+            # print(window.is_dialog())
+            # print(window.is_enabled())
+            # print(window.get_properties())
+
+            if ls_window[idx].is_active():
+                print('minimize')
+                ls_window[idx].minimize()
+            else:
+            # print(dir(ls_window[idx]))
+                print('not active')
+                ls_window[idx].set_focus()
     else:
         # 如果没有找到匹配的窗口，则打开应用程序
         app = Application()
