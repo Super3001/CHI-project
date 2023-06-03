@@ -15,35 +15,40 @@ def read_data():
             path_dict[window_name] = path
     return ls_window_name, path_dict
 
-ls_window_name, path_dict = read_data()
-print('len:',len(path_dict))
-
+op = 0
 def Trigger(code):
-    if code[0]=='1':
+    global op
+    if code[0]=='1' and op == 0:
         focus(0)
+        op = 1
     # root.after(100)  # 每100毫秒调用一次
     
-    if code[1]=='1':
+    elif code[0]=='1' and op == 1:
         # print_windows()
         focus(0, r=True)
+        op = 0
 
-ls_window = [None]*len(ls_window_name)
-# 获取当前桌面
 import time
 st = time.time()
+
+ls_window_name, path_dict = read_data()
+print('len:',len(path_dict))
+ls_window = [None]*len(ls_window_name)
+# 获取当前桌面
 from pywinauto import Desktop, Application
 desktop = Desktop(backend="uia")
 for window in desktop.windows():
     if ls_window_name[0] in window.window_text() :
         ls_window[0] = window
 end = time.time()
-print('elapsed:', end-st)
+print('inital elapsed:', end-st)
 
 def focus(idx, r=False):
     st_ = time.time()
     if ls_window[idx] != None:
         if r: # reverse
             ls_window[idx].minimize()
+            print('minimize')
         else:
             ls_window[idx].set_focus()
     else:

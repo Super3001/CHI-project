@@ -155,7 +155,7 @@ if __name__=='__main__':
     #port = input('please input port No. such as com7:'));
     # baud = int(input('please input baudrate(115200 for JY61 or 9600 for JY901):'))
     # ser = serial.Serial(port, baud, timeout=0.5)  
-    ser = serial.Serial('com7',115200, timeout=0.5) 
+    ser = serial.Serial('com9',115200, timeout=0.5) 
     print(ser.is_open)
     import time
     while(1):

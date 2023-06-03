@@ -38,7 +38,6 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
                 FrameState=3
                 Bytenum=2
         elif FrameState==1: # acc    #已确定数据代表加速度
-            pass
             if Bytenum<10:            # 读取8个数据
                 ACCData[Bytenum-2]=data # 从0开始
                 CheckSum+=data
@@ -50,7 +49,6 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
                 Bytenum=0
                 FrameState=0
         elif FrameState==2: # gyro
-            pass
             if Bytenum<10:
                 GYROData[Bytenum-2]=data
                 CheckSum+=data
@@ -62,7 +60,6 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
                 Bytenum=0
                 FrameState=0
         elif FrameState==3: # angle
-            
             if Bytenum<10:
                 AngleData[Bytenum-2]=data
                 CheckSum+=data
@@ -70,28 +67,52 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
             else:
                 if data == (CheckSum&0xff):
                     Angle = get_angle(AngleData)
-                    # d = a+w+Angle
+                    d = a+w+Angle
                     # print("a(g):%10.3f %10.3f %10.3f w(deg/s):%10.3f %10.3f %10.3f Angle(deg):%10.3f %10.3f %10.3f"%d)
                     # print("Angle(deg):%10.3f %10.3f %10.3f"%Angle)
+                    return d
                 CheckSum=0
                 Bytenum=0
                 FrameState=0
-                return Angle
             
-def parseData(angle) -> str:
-    if not flag:
-        return '00'
-    if not angle:
-        return '00'
-    elif angle[2] < pre_angle[2]-40 and angle[1] < pre_angle[1]:
-        return '01'
-    elif angle[2] < pre_angle[2]-40 and angle[1] > pre_angle[1]:
-        return '10'
-    else:
-        return '00'
+# 统一判断标准
+def parseData(d) -> str:
+    global pos
+    if pos == 0:
+        # if angle[2] < pre_angle[2]-40 and angle[1] > pre_angle[1]:
+        if d[4] < -100: # wy < -100
+            pos = 1
+            return '10'
+        # elif angle[2] < pre_angle[2]-40 and angle[1] < pre_angle[1]:
+        elif d[5] < -100 :  # wz < -100 : 内扣手臂手势
+            pos = 2
+            return '01'
+    elif pos == 1: # 需要复位
+        if d[4] > 100:
+            pos = 0
+            return 'rs'
+    elif pos == 2:
+        if d[5] > 100:
+            pos = 0
+            return 'rs'
+    return '00'
+
+import time
+t_last = 0
+SET_INTERVAL = 0.7
+pos = 0
+
+def remove_shake(code):
+    global t_last
+    if code!='00':
+        now = time.time()
+        interval = now - t_last
+        if(interval < SET_INTERVAL):    
+            code = '00'
+        t_last = now
+    return code
 
 def get_acc(datahex):  
-    return 0,0,0
     axl = datahex[0]                                        
     axh = datahex[1]
     ayl = datahex[2]                                        
@@ -114,7 +135,6 @@ def get_acc(datahex):
     return acc_x,acc_y,acc_z
  
 def get_gyro(datahex):  
-    return 0,0,0             
     wxl = datahex[0]                                        
     wxh = datahex[1]
     wyl = datahex[2]                                        
@@ -164,7 +184,7 @@ cnt_static = 0
 STATIC_NUM = 100
 def alter(code, angle_data):
     global cnt_static
-    if code == '00':
+    if code == '00' and pos == 0:
         cnt_static+=1
         qdata.enqueue(angle_data)
     else:
@@ -174,26 +194,46 @@ def alter(code, angle_data):
         print(f'altered({STATIC_NUM} turns): {pre_angle}')
         cnt_static=0
 
+flag = 0
+ls_pre = []
+pre_d = [0] * 9
+def get_d_initial(i, d):
+    global flag
+    if i >= 5:
+        ls_pre.append(d)
+    elif i == 10:
+        for j in range(9):
+            pre_d[j] = sum([x[j] for x in ls_pre]) / len(ls_pre)
+        flag = 1
+
+
 import serial, time
-ser = serial.Serial('com7',115200, timeout=0.5) 
+ser = serial.Serial('com9',115200, timeout=0) 
 print(ser.is_open)
 cnt = 0
-ls_pre = []
-flag = 0
-pre_angle = (0,0,0)
 while(1):
     datahex = ser.read(33)
-    angle = DueData(datahex)
-    if not angle:
+    d = DueData(datahex) # d: a + w + angle
+    # if serial not return data
+    if not d:
         continue
-    if cnt in range(5,10):
-        ls_pre.append(angle)
-    elif cnt==10:
-        flag = 1
-        pre_angle = (sum([x[0] for x in ls_pre])/5, sum([x[1] for x in ls_pre])/5, sum([x[2] for x in ls_pre])/5)
-        print(pre_angle)
-    sts=parseData(angle)
-    alter(sts, angle)
+    if cnt <= 10:
+        get_d_initial(cnt, d)
+    sts=parseData(d)
+    alter(sts, d)
+    code = remove_shake(sts)
+    if cnt > 10:
+        print(d[6:9])
     print(sts)
     cnt+=1
+    if(cnt%100 == 0):
+        try:
+            # ser.close()
+            # ser = serial.Serial('com7',115200, timeout=0.5)
+            # ser.open()
+            pass
+        except:
+            raise ValueError('serial down')
+            
     time.sleep(0.01)
+ser.close()
