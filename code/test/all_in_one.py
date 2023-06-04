@@ -1,4 +1,9 @@
-# serial_in_test.py
+# all_in_one.py
+from redirection import __redirection__
+import sys
+# f=open('print.txt','w') 
+# sys.stdout=f # 重定向输出
+
 
 ACCData=[0.0]*8
 GYROData=[0.0]*8
@@ -80,7 +85,7 @@ def parseData(d) -> str:
     global pos
     if pos == 0:
         # if angle[2] < pre_angle[2]-40 and angle[1] > pre_angle[1]: # 主手势（左转手腕）角度触发
-        if d[4] < -200: # wy < -150 主手势 角速度触发
+        if d[4] < -100: # wy < -150 主手势 角速度触发
             pos = 1
             return '100'
         # if d[6] < 1 and d[8] < 1:  # ax < 1, az < 1: 抬起手臂（辅助手势1）
@@ -92,7 +97,7 @@ def parseData(d) -> str:
             pos = 3
             return '001'
     elif pos == 1: # 需要复位
-        if d[4] > 200:
+        if d[4] > 100:
             pos = 0
             return 'rst'
     elif pos == 2:
@@ -228,34 +233,143 @@ def get_d_initial(i, d):
             pre_d[j] = sum([x[j] for x in ls_pre]) / len(ls_pre)
         flag = 1
 
+# trigger.py
+
+mode = "anchor"
+# mode = "hotkey"
+from pywinauto.keyboard import send_keys
+
+def read_data():
+    with open('code\win\path.txt','r', encoding='utf-8') as f:
+        # lines = f.readlines()
+        path_dict = {}
+        ls_window_name = []
+        for line in f.readlines():
+            # print(line)
+            if len(line) < 2:
+                continue
+            window_name,path = line.split(': ')
+            ls_window_name.append(window_name)
+            path = path.replace('\n','')
+            path_dict[window_name] = path
+    return ls_window_name, path_dict
+
+op = 0
+def Trigger(code):
+    global op, mode
+    if mode == "anchor":
+        if code[0]=='1':
+            if op==0: 
+                focus(0)
+                op=1
+            else: 
+                focus(0,r=True)
+                op = 0
+        elif code[1] == '1':
+            exit(0)
+    else:
+        if code[0]=='1':
+            if op == 0:
+                op = 1
+                # send_keys('%{TAB}')
+                print('ccc'*10)
+                send_keys('^c')
+                
+            elif op == 1:
+                op=0
+                # send_keys('%{TAB}')
+                print('vvv'*10)
+                send_keys('^v')
+                
+        elif code[1]=='1':
+            send_keys('{VK_MENU down}')
+            # 连续按下TAB键两次
+            send_keys('{TAB}{TAB}')
+            # 释放Alt键
+            send_keys('{VK_MENU up}')
+
+        elif code[2] == '1':
+            send_keys('%{TAB}') # alt + tab
+
+st = time.time()
+ls_window_name, path_dict = read_data()
+print('len:',len(path_dict))
+ls_window = [None]*len(ls_window_name)
+# 获取当前桌面
+from pywinauto import Desktop, Application
+desktop = Desktop(backend="uia")
+for window in desktop.windows():
+    if ls_window_name[0] in window.window_text() :
+        ls_window[0] = window
+end = time.time()
+print('inital elapsed:', end-st)
+
+def focus(idx, r=False):
+    st_ = time.time()
+    if ls_window[idx] != None:
+        if r: # reverse
+            print('reverse')
+            ls_window[idx].minimize()
+        else:
+            window = ls_window[idx]
+            print(f'time: {st_}')
+            ls_window[idx].set_focus()
+    else:
+        # 如果没有找到匹配的窗口，则打开应用程序
+        app = Application()
+        try:
+            app.start(path_dict[ls_window_name[idx]])
+        except Exception as e:
+            print(e)
+            exit(0)
+    end_= time.time()
+    print('elapsed_:',end_-st_)
+
+
 
 import serial, time
 ser = serial.Serial('com9',115200, timeout=0) 
 print(ser.is_open)
 cnt = 0
 while(1):
+    # st_ = time.time()
     datahex = ser.read(33)
+    # end_ = time.time()
+    # print('read data elapse:', end_ - st_)
+    # st_ = time.time()
     d = DueData(datahex) # d: a + w + angle
+    # end_ = time.time()
+    # print('due data elapse:', end_ - st_)
+
     # if serial not return data
     if not d:
         continue
     if cnt <= 10:
         get_d_initial(cnt, d)
+    
+    print(d[3:6])
+    # st_ = time.time()
     sts=parseData(d)
+    # end_ = time.time()
+    # print('parse data elapse:', end_ - st_)
+    # st_ = time.time()
     alter(sts, d)
+    # end_ = time.time()
+    # print('alter elapse:', end_ - st_)
+    # st_ = time.time()
     code = remove_shake(sts)
-    # if cnt > 10:
-    #     print(d[6:9])
+    # end_ = time.time()
+    # print('remove shake elapse:', end_ - st_)
+    # st_ = time.time()
     print(sts)
-    cnt+=1
-    if(cnt%100 == 0):
-        try:
-            # ser.close()
-            # ser = serial.Serial('com7',115200, timeout=0.5)
-            # ser.open()
-            pass
-        except:
-            raise ValueError('serial down')
-            
+    # end_ = time.time()
+    # print('print elapse:', end_ - st_)
+    # st_ = time.time()
+    Trigger(sts)
+    # end_ = time.time()
+    # print('trigger elapse:', end_ - st_)
+    cnt+=1  
     time.sleep(0.01)
 ser.close()
+
+# f.close()

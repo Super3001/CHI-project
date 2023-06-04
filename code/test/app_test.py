@@ -22,6 +22,8 @@ class App:
         for i, line in enumerate(iter(p.stdout.readline, b'')):
             if i==1:
                 end_ = time.time()
+                end_ = time.time()
+                end_ = time.time()
                 print(f'elapsed: {end_ - st_}s')
             # 处理每一行输出
             # print(f'{i}: {line} ',end='')
@@ -34,9 +36,11 @@ class App:
             self.deal(code)
 
     def deal(self, code):
-        if type(code) == str and len(code)==2:
+        if type(code) == str and len(code)==3:
             print(code, end=' ')
             Trigger(code)
+        else:
+            print(code)
             
 
 def main():

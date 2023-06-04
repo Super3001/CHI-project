@@ -1,5 +1,9 @@
 # trigger.py
 
+mode = "anchor"
+# mode = "hotkey"
+from pywinauto.keyboard import send_keys
+
 def read_data():
     with open('code\win\path.txt','r', encoding='utf-8') as f:
         # lines = f.readlines()
@@ -15,10 +19,42 @@ def read_data():
             path_dict[window_name] = path
     return ls_window_name, path_dict
 
+op = 0
 def Trigger(code):
-    global op
-    if code[0]=='1':
-        focus(0)
+    global op, mode
+    if mode == "anchor":
+        if code[0]=='1':
+            if op==0: 
+                focus(0)
+                op=1
+            else: 
+                focus(0,r=True)
+                op = 0
+    else:
+        if code[0]=='1':
+            if op == 0:
+                op = 1
+                # send_keys('%{TAB}')
+                print('ccc'*10)
+                send_keys('^c')
+                
+            elif op == 1:
+                op=0
+                # send_keys('%{TAB}')
+                print('vvv'*10)
+                send_keys('^v')
+                
+        elif code[1]=='1':
+            send_keys('{VK_MENU down}')
+            # 连续按下TAB键两次
+            send_keys('{TAB}{TAB}')
+            # 释放Alt键
+            send_keys('{VK_MENU up}')
+
+        elif code[2] == '1':
+            send_keys('%{TAB}') # alt + tab
+
+
 
 import time
 st = time.time()
@@ -40,7 +76,7 @@ def focus(idx, r=False):
     if ls_window[idx] != None:
         if r: # reverse
             print('reverse')
-            # ls_window[idx].minimize()
+            ls_window[idx].minimize()
         else:
             window = ls_window[idx]
             print(f'time: {st_}')
@@ -49,13 +85,14 @@ def focus(idx, r=False):
             # print(window.is_enabled())
             # print(window.get_properties())
 
-            if ls_window[idx].is_active():
-                print('minimize')
-                ls_window[idx].minimize()
-            else:
+            # if ls_window[idx].is_active():
+                # print('minimize')
+                # ls_window[idx].minimize()
+                # ls_window[idx].set_focus()
+            # else:
             # print(dir(ls_window[idx]))
-                print('not active')
-                ls_window[idx].set_focus()
+                # print('not active')
+            ls_window[idx].set_focus()
     else:
         # 如果没有找到匹配的窗口，则打开应用程序
         app = Application()
@@ -64,7 +101,7 @@ def focus(idx, r=False):
         except Exception as e:
             print(e)
             exit(0)
-    end_=time.time()
+    end_= time.time()
     print('elapsed_:',end_-st_)
 
 # if __name__ == '__main__':
