@@ -19,6 +19,8 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
     global  a
     global  w
     global  Angle
+    if len(inputdata) > 0:
+        print(list(inputdata))
     for data in inputdata:  #在输入的数据进行遍历
         if FrameState==0:   #当未确定状态的时候，进入以下判断
             if data==0x55 and Bytenum==0: #0x55位于第一位时候，开始读取数据，增大bytenum
@@ -70,17 +72,23 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
                     d = a+w+Angle
                     # print("a(g):%10.3f %10.3f %10.3f w(deg/s):%10.3f %10.3f %10.3f Angle(deg):%10.3f %10.3f %10.3f"%d)
                     # print("Angle(deg):%10.3f %10.3f %10.3f"%Angle)
+                    CheckSum=0
+                    Bytenum=0
+                    FrameState=0
                     return d
                 CheckSum=0
                 Bytenum=0
                 FrameState=0
+    CheckSum=0
+    Bytenum=0
+    FrameState=0
             
 # 统一判断标准
 def parseData(d) -> str:
     global pos
     if pos == 0:
         # if angle[2] < pre_angle[2]-40 and angle[1] > pre_angle[1]: # 主手势（左转手腕）角度触发
-        if d[4] < -200: # wy < -150 主手势 角速度触发
+        if d[4] < -100: # wy < -150 主手势 角速度触发
             pos = 1
             return '100'
         # if d[6] < 1 and d[8] < 1:  # ax < 1, az < 1: 抬起手臂（辅助手势1）
@@ -92,7 +100,7 @@ def parseData(d) -> str:
             pos = 3
             return '001'
     elif pos == 1: # 需要复位
-        if d[4] > 200:
+        if d[4] > 100:
             pos = 0
             return 'rst'
     elif pos == 2:
@@ -175,7 +183,8 @@ def get_gyro(datahex):
         gyro_z-= 2 * k_gyro
     return gyro_x,gyro_y,gyro_z
  
-def get_angle(datahex):                                 
+def get_angle(datahex):   
+    print(str(datahex))                              
     rxl = datahex[0]                                        
     rxh = datahex[1]
     ryl = datahex[2]                                        
@@ -228,34 +237,38 @@ def get_d_initial(i, d):
             pre_d[j] = sum([x[j] for x in ls_pre]) / len(ls_pre)
         flag = 1
 
+def main():
+    import serial, time
+    ser = serial.Serial('com9',115200, timeout=0) 
+    print(ser.is_open)
+    cnt = 0
+    while(1):
+        datahex = ser.read(33)
+        d = DueData(datahex) # d: a + w + angle
+        # if serial not return data
+        if not d:
+            continue
+        if cnt <= 10:
+            get_d_initial(cnt, d)
+        print(d)
+        sts=parseData(d)
+        alter(sts, d)
+        sts = remove_shake(sts)
+        # if cnt > 10:
+        #     print(d[6:9])
+        print(sts)
+        cnt+=1
+        if(cnt%100 == 0):
+            try:
+                # ser.close()
+                # ser = serial.Serial('com7',115200, timeout=0.5)
+                # ser.open()
+                pass
+            except:
+                raise ValueError('serial down')
+                
+        time.sleep(0.01)
+    ser.close()
 
-import serial, time
-ser = serial.Serial('com9',115200, timeout=0) 
-print(ser.is_open)
-cnt = 0
-while(1):
-    datahex = ser.read(33)
-    d = DueData(datahex) # d: a + w + angle
-    # if serial not return data
-    if not d:
-        continue
-    if cnt <= 10:
-        get_d_initial(cnt, d)
-    sts=parseData(d)
-    alter(sts, d)
-    code = remove_shake(sts)
-    # if cnt > 10:
-    #     print(d[6:9])
-    print(sts)
-    cnt+=1
-    if(cnt%100 == 0):
-        try:
-            # ser.close()
-            # ser = serial.Serial('com7',115200, timeout=0.5)
-            # ser.open()
-            pass
-        except:
-            raise ValueError('serial down')
-            
-    time.sleep(0.01)
-ser.close()
+if __name__ == '__main__':
+    main()
