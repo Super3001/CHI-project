@@ -1,5 +1,6 @@
 # serial_in_test.py
 
+"""读取数据的全局变量"""
 ACCData=[0.0]*8
 GYROData=[0.0]*8
 AngleData=[0.0]*8          
@@ -12,6 +13,8 @@ w = [0.0]*3
 Angle = [0.0]*3
 ls_pre = []
 flag = 0
+
+"""将串口二进制数据转为九维数值数据"""
 def DueData(inputdata):   #新增的核心程序，对读取的数据进行划分，各自读到对应的数组里
     global  FrameState    #在局部修改全局变量，要进行global的定义
     global  Bytenum
@@ -83,7 +86,7 @@ def DueData(inputdata):   #新增的核心程序，对读取的数据进行划�
     Bytenum=0
     FrameState=0
             
-# 统一判断标准
+"""判断九维数据是否达到触发条件，返回状态代码"""
 def parseData(d) -> str:
     global pos
     if pos == 0:
@@ -130,7 +133,7 @@ t_last = 0
 SET_INTERVAL = 0.3
 pos = 0
 
-# 防抖功能
+"""防抖功能函数，未完善"""
 def remove_shake(code):
     global t_last
     if code!='000':
@@ -141,6 +144,7 @@ def remove_shake(code):
         t_last = now
     return code
 
+"""产生加速度数据"""
 def get_acc(datahex):  
     axl = datahex[0]                                        
     axh = datahex[1]
@@ -162,7 +166,8 @@ def get_acc(datahex):
         acc_z-= 2 * k_acc
     
     return acc_x,acc_y,acc_z
- 
+
+"""产生角速度数据"""
 def get_gyro(datahex):  
     wxl = datahex[0]                                        
     wxh = datahex[1]
@@ -183,6 +188,7 @@ def get_gyro(datahex):
         gyro_z-= 2 * k_gyro
     return gyro_x,gyro_y,gyro_z
  
+"""产生角度数据"""
 def get_angle(datahex):   
     print(str(datahex))                              
     rxl = datahex[0]                                        
@@ -206,12 +212,11 @@ def get_angle(datahex):
     return angle_x,angle_y,angle_z
 
 
-# import queue
-# qdata = queue.Queue()
 from autoqueue import AutoQueue # 手写类
 qdata = AutoQueue(5) # 手写自用队列
 cnt_static = 0
-# 静态自动校正功能
+
+"""静态自动校准功能"""
 STATIC_NUM = 100
 def alter(code, angle_data):
     global cnt_static
@@ -228,6 +233,7 @@ def alter(code, angle_data):
 flag = 0
 ls_pre = []
 pre_d = [0] * 9
+"""初始化角度，配合alter()"""
 def get_d_initial(i, d):
     global flag
     if i >= 5:
@@ -237,6 +243,7 @@ def get_d_initial(i, d):
             pre_d[j] = sum([x[j] for x in ls_pre]) / len(ls_pre)
         flag = 1
 
+"""程序调试主函数"""
 def main():
     import serial, time
     ser = serial.Serial('com9',115200, timeout=0) 
@@ -269,6 +276,7 @@ def main():
                 
         time.sleep(0.01)
     ser.close()
+
 
 if __name__ == '__main__':
     main()

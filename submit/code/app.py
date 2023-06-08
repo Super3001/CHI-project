@@ -3,14 +3,16 @@
 import time
 import tkinter as tk
 import threading
-from serial_in_test import *
-from trigger_pywin32 import Trigger
+from serial_in import *
+from trigger import Trigger
 
 flog = open('flog.txt','a')
+"""打印输出到文件"""
 def log(s):
     flog.write(s + '\n')
 
 p_stop = False
+"""程序运行的主窗口"""
 class App:
     def __init__(self, master):
         self.master = master
@@ -26,6 +28,7 @@ class App:
         self.quitbt = tk.Button(self.master,width=100,height=2, activebackground="red",text='退出',command=self.quit)
         self.quitbt.pack(pady=10)
 
+    """用threading方式多进程"""
     def run(self):
         import serial
         ser = serial.Serial('com7',115200, timeout=0.1) 
@@ -66,11 +69,13 @@ class App:
             time.sleep(0.01)
         ser.close()
 
+    """用subprocess方式多进程"""
     def run_1(self):
+        import subprocess
         print('run start:')
         st_ = time.time()
 
-        p = subprocess.Popen(['python', 'code/test/serial_in_test.py'], stdout=subprocess.PIPE)
+        p = subprocess.Popen(['python', 'code/test/serial_in.py'], stdout=subprocess.PIPE)
         for i, line in enumerate(iter(p.stdout.readline, b'')):
             if i==1:
                 end_ = time.time()
@@ -85,13 +90,15 @@ class App:
             code = line.decode('utf-8').strip()
             self.deal(code)
 
+    """配套run_1()"""
     def deal(self, code):
         if type(code) == str and len(code)==3:
             print(code, end=' ')
             Trigger(code)
         else:
             print(code)
-            
+
+    """退出程序，关闭多进程，配合run()"""  
     def quit(self):
         global threading_stop
         threading_stop = True
@@ -101,14 +108,15 @@ class App:
         except:
             print('destroyed')
     
-
+"""主函数"""
 def main():
     global root, app
     root = tk.Tk()
     app = App(root)
     root.mainloop()
 
-def shut(p):
+"""退出程序，关闭多进程，配合run_1()"""  
+def shut():
     global p_stop
     p_stop = True
     time.sleep(0.1)
@@ -118,7 +126,6 @@ def shut(p):
     except:
         print('destroyed')
         pass
-
 
 
 if __name__ == "__main__":
